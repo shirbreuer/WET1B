@@ -51,6 +51,73 @@ static bool stringNameValidator(const char* stringName) {
     
 }
 
+// static const char* electionGetAreaName (Election election, int area_id)
+// {
+//     if(!election){
+//         return NULL;
+//     }
+//     char* area_name = mapGet(election->area, (char*)area_id);
+//     return((area_name==NULL)? NULL : area_name);
+// }
+
+static ElectionResult preVoteValidator(Election election, int area_id, int tribe_id, int num_of_votes){
+    if(!election|| area_id==NULL || tribe_id == NULL | num_of_votes == NULL){
+        return ELECTION_NULL_ARGUMENT;
+    }
+    if (tribe_id<0 || area_id<0){
+        return ELECTION_INVALID_ID;
+    }
+    if (num_of_votes<=0){
+        return ELECTION_INVALID_VOTES;
+    }
+    if (!mapContains(election->area,(char*)area_id)){
+        return ELECTION_AREA_NOT_EXIST;
+    }
+    if (!mapContains(election->tribe,(char*)tribe_id)){
+        return ELECTION_TRIBE_NOT_EXIST;
+    }
+    return ELECTION_SUCCESS;
+}
+
+static AreaVotes nodeGet(AreaVotes head, int area_id) {
+    while (head)
+    {
+        if (head->area_id == area_id) {
+            return head;
+        }
+        head = head->next;
+    }
+    return NULL;
+}
+
+static void nodeLink(AreaVotes previous, AreaVotes to_link) {
+    to_link->next = previous->next;
+    previous->next = to_link;
+}
+
+static void nodeDestroy(AreaVotes head, AreaVotes to_destroy) {
+    if (!head || !to_destroy) {
+        return;
+    }
+    while (head->next != to_destroy){
+        head = head->next;  // Is the value of the head is changing here ? 
+    }
+    nodeLink(head, to_destroy->next);
+    mapDestroy(to_destroy->tribe_votes);
+    free(to_destroy);
+}
+
+static void listDestroy(AreaVotes head) {
+    if(!head) {
+        return;
+    }
+    while(head->next) {
+        nodeDestroy(head,head->next);
+    }
+    mapDestroy(head->tribe_votes);
+    free(head);
+}
+
 Election electionCreate() {
     Election election = malloc(sizeof(*election));
     if (!election) {
@@ -70,11 +137,14 @@ Election electionCreate() {
     return election;
 }
 void electionDestroy(Election election) {
-        mapDestroy(election->area);
-        mapDestroy(election->tribe);
-        mapDestroy(election->results);
-        // list remove function
-        free(election);
+    if (!election) {
+        return;
+    }
+    mapDestroy(election->area);
+    mapDestroy(election->tribe);
+    mapDestroy(election->results);
+    listDestroy(election->vote_list_head);
+    free(election);
 }
 
 ElectionResult electionAddTribe (Election election, int tribe_id, const char* tribe_name) {
@@ -122,13 +192,9 @@ const char* electionGetTribeName (Election election, int tribe_id)
     if(!election){
         return NULL;
     }
-    
-    return((mapGet(election->tribe, (char*)tribe_id)==NULL)? NULL : 
+    char* tribe_name = mapGet(election->tribe, (char*)tribe_id);
+    return((tribe_name==NULL)? NULL : tribe_name);
 }
-
-
-
-
 
 ElectionResult electionSetTribeName (Election election, int tribe_id, const char* tribe_name) {
     if (!election || tribe_id == NULL || !tribe_name) {
@@ -137,7 +203,7 @@ ElectionResult electionSetTribeName (Election election, int tribe_id, const char
     if (tribe_id < 0) {
         return ELECTION_INVALID_ID;
     }
-    if (!mapGet(election->tribe, (char*)tribe_id)) {
+    if (electionGetTribeName(election, tribe_id) == NULL) {
         return ELECTION_TRIBE_NOT_EXIST;
     }
     if (!stringNameValidator(tribe_name)) {
@@ -149,4 +215,60 @@ ElectionResult electionSetTribeName (Election election, int tribe_id, const char
     }
 
     return ELECTION_SUCCESS;
+}
+
+ElectionResult electionRemoveTribe (Election election, int tribe_id) {
+    if (!election || tribe_id == NULL) {
+        return ELECTION_NULL_ARGUMENT;
+    }
+    if (tribe_id < 0) {
+        return ELECTION_INVALID_ID;
+    }
+    if (electionGetTribeName(election, tribe_id) == NULL) {
+        return ELECTION_TRIBE_NOT_EXIST;
+    }
+    if (mapRemove(election->tribe, (char*)tribe_id) == MAP_OUT_OF_MEMORY) {
+        electionDestroy(election);
+        return ELECTION_OUT_OF_MEMORY;
+    }
+    return ELECTION_SUCCESS;
+
+}
+
+ElectionResult electionAddVote (Election election, int area_id, int tribe_id, int num_of_votes){
+    ElectionResult validor = preVoteValidator(election, area_id, tribe_id, num_of_votes);
+    if (validor != ELECTION_SUCCESS) {
+        return validor;
+    }
+    AreaVotes area_node = nodeGet(election->vote_list_head, area_id);
+    if (!area_node){
+        if (!(area_node = nodeCreate(area_id))) { // re-check
+            electionDestroy(election);
+            return ELECTION_OUT_OF_MEMORY;
+        }
+        nodeLink(election->vote_list_head , area_node);
+    }
+    char* current_vote_counter_string = mapGet(area_node,(char*)tribe_id);
+    int current_vote_counter = (current_vote_counter_string == NULL ? 0 :  (int)current_vote_counter_string);
+    asssert(area_node->tribe_votes);
+    if ((mapPut(area_node->tribe_votes , (char*)tribe_id , current_vote_counter + num_of_votes)) == MAP_OUT_OF_MEMORY) {
+        electionDestroy(election);
+        return ELECTION_OUT_OF_MEMORY;
+    }
+    return ELECTION_SUCCESS;
+}
+
+ElectionResult electionRemoveVote (Election election, int area_id, int tribe_id, int num_of_votes) {
+    ElectionResult validor = preVoteValidator(election, area_id, tribe_id, num_of_votes);
+    if (validor != ELECTION_SUCCESS) {
+        return validor;
+    }
+    int current_vote_counter = (int)mapGet(election->vote_list_head->tribe_votes, tribe_id);
+    if (current_vote_counter <= num_of_votes) {
+        num_of_votes = current_vote_counter;
+    }
+    if(mapPut(election->vote_list_head->tribe_votes, tribe_id, (char*)(current_vote_counter-num_of_votes)) != MAP_SUCCESS) {
+        electionDestroy(election);
+        return ELECTION_OUT_OF_MEMORY;
+    }
 }
