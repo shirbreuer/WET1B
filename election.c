@@ -122,6 +122,7 @@ const char* electionGetTribeName (Election election, int tribe_id)
     if(!election){
         return NULL;
     }
+    
     return((mapGet(election->tribe, (char*)tribe_id)==NULL)? NULL : 
 }
 
