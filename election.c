@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z') 
+
+#define GET_VOTE(map, tribe_id) mapGet(map,(char*)tribe_id) == NULL ? 0 : (int)mapGet(map,(char*)tribe_id); // re-check
+
+
+
 //static functions
 
 
@@ -169,19 +174,19 @@ ElectionResult electionAddTribe (Election election, int tribe_id, const char* tr
 }
 
 ElectionResult electionAddArea(Election election, int area_id, const char* area_name) {
-       if(!election || area_id == NULL || !area_name){
+       if(!election || (char*)area_id == NULL || !area_name) {
            return ELECTION_NULL_ARGUMENT;
        }
-       if (area_id < 0){
+       if (area_id < 0) {
            return ELECTION_INVALID_ID;
        }
-       if(mapGet(election->area,(char*)area_id)){
+       if(mapGet(election->area,(char*)area_id)) {
            return ELECTION_AREA_ALREADY_EXIST;
        }
-       if (!stringNameValidator(area_name)){
+       if (!stringNameValidator(area_name)) {
            return ELECTION_INVALID_NAME;
        }
-       if (mapPut(election->area, (char*)area_id, area_name)== MAP_OUT_OF_MEMORY){
+       if (mapPut(election->area, (char*)area_id, area_name)== MAP_OUT_OF_MEMORY) {
            electionDestroy(election);
            return ELECTION_OUT_OF_MEMORY;
        }
@@ -218,27 +223,41 @@ ElectionResult electionSetTribeName (Election election, int tribe_id, const char
 }
 
 ElectionResult electionRemoveTribe (Election election, int tribe_id) {
-    if (!election || tribe_id == NULL) {
+    if (!election || (char*)tribe_id == NULL) {
         return ELECTION_NULL_ARGUMENT;
     }
     if (tribe_id < 0) {
         return ELECTION_INVALID_ID;
     }
-    if (electionGetTribeName(election, tribe_id) == NULL) {
+    if(mapRemove(election->tribe, (char*)tribe_id) == MAP_ITEM_DOES_NOT_EXIST) {
         return ELECTION_TRIBE_NOT_EXIST;
     }
-    if (mapRemove(election->tribe, (char*)tribe_id) == MAP_OUT_OF_MEMORY) {
-        electionDestroy(election);
-        return ELECTION_OUT_OF_MEMORY;
+    AreaVotes current_area_votes = election->vote_list_head;
+    while(current_area_votes){
+        mapRemove(current_area_votes->tribe_votes,(char*)tribe_id);
+        current_area_votes=current_area_votes->next;
     }
     return ELECTION_SUCCESS;
+}
 
+ElectionResult electionRemoveAreas(Election election,  AreaConditionFunction should_delete_area) {
+    if(!election || !should_delete_area){
+        return ELECTION_NULL_ARGUMENT;
+    }
+    for(char* key = mapGetFirst(election->area);key;key=mapGetNext(election->area)){
+        if(should_delete_area((int)key)) {
+            mapRemove(election->area,key);
+            AreaVotes area_votes_to_remove = nodeGet(election->vote_list_head,(int)key);
+            nodeDestroy(election->vote_list_head,area_votes_to_remove);
+        }
+    }
+    return ELECTION_SUCCESS;
 }
 
 ElectionResult electionAddVote (Election election, int area_id, int tribe_id, int num_of_votes){
-    ElectionResult validor = preVoteValidator(election, area_id, tribe_id, num_of_votes);
-    if (validor != ELECTION_SUCCESS) {
-        return validor;
+    ElectionResult validator = preVoteValidator(election, area_id, tribe_id, num_of_votes);
+    if (validator != ELECTION_SUCCESS) {
+        return validator;
     }
     AreaVotes area_node = nodeGet(election->vote_list_head, area_id);
     if (!area_node){
@@ -248,22 +267,21 @@ ElectionResult electionAddVote (Election election, int area_id, int tribe_id, in
         }
         nodeLink(election->vote_list_head , area_node);
     }
-    char* current_vote_counter_string = mapGet(area_node,(char*)tribe_id);
-    int current_vote_counter = (current_vote_counter_string == NULL ? 0 :  (int)current_vote_counter_string);
+    int current_vote_counter = GET_VOTE(election->vote_list_head->tribe_votes, tribe_id);
     asssert(area_node->tribe_votes);
     if ((mapPut(area_node->tribe_votes , (char*)tribe_id , current_vote_counter + num_of_votes)) == MAP_OUT_OF_MEMORY) {
         electionDestroy(election);
         return ELECTION_OUT_OF_MEMORY;
     }
-    return ELECTION_SUCCESS;
+    return validator;
 }
 
 ElectionResult electionRemoveVote (Election election, int area_id, int tribe_id, int num_of_votes) {
-    ElectionResult validor = preVoteValidator(election, area_id, tribe_id, num_of_votes);
-    if (validor != ELECTION_SUCCESS) {
-        return validor;
+    ElectionResult validator = preVoteValidator(election, area_id, tribe_id, num_of_votes);
+    if (validator != ELECTION_SUCCESS) {
+        return validator;
     }
-    int current_vote_counter = (int)mapGet(election->vote_list_head->tribe_votes, tribe_id);
+    int current_vote_counter = GET_VOTE(election->vote_list_head->tribe_votes, tribe_id);
     if (current_vote_counter <= num_of_votes) {
         num_of_votes = current_vote_counter;
     }
@@ -271,4 +289,27 @@ ElectionResult electionRemoveVote (Election election, int area_id, int tribe_id,
         electionDestroy(election);
         return ELECTION_OUT_OF_MEMORY;
     }
+    return validator;
+}
+
+Map electionComputeAreasToTribesMapping (Election election) {
+    if(!election->results) {
+        return NULL;
+    }
+    while (election->vote_list_head) {
+        char* tribe_winner_id = mapGetFirst(election->vote_list_head->tribe_votes);
+        int tribe_winner_votes = (int)mapGet(election->vote_list_head->tribe_votes, tribe_winner_id);
+        for (char* temp_tribe_id = (mapGetNext(election->vote_list_head->tribe_votes));temp_tribe_id;temp_tribe_id = (mapGetNext(election->vote_list_head->tribe_votes)))
+        {
+            int temp_tribe_votes = (int)mapGet(election->vote_list_head->tribe_votes, temp_tribe_id);
+            if ((temp_tribe_votes > tribe_winner_votes) || ((temp_tribe_votes == tribe_winner_votes)&&(int)temp_tribe_id < (int)tribe_winner_id)) {
+                tribe_winner_id = temp_tribe_id;
+                tribe_winner_votes = temp_tribe_votes;
+            }            
+        }
+        asssert(election->results && election->vote_list_head->area_id && tribe_winner_id);
+        mapPut(election->results, (char*) (election->vote_list_head->area_id), tribe_winner_id);
+        election->vote_list_head = election->vote_list_head->next;
+    }
+    return election->results;
 }
