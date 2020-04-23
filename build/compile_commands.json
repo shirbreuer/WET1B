@@ -1,0 +1,12 @@
+[
+{
+  "directory": "C:/Users/shirb/WET1B/WET1B/build",
+  "command": "C:/cygwin64/bin/gcc.exe   -std=c99 --pedantic-errors -Wall -Werror -g   -o CMakeFiles/election_test.dir/election.c.obj   -c C:/Users/shirb/WET1B/WET1B/election.c",
+  "file": "C:/Users/shirb/WET1B/WET1B/election.c"
+},
+{
+  "directory": "C:/Users/shirb/WET1B/WET1B/build",
+  "command": "C:/cygwin64/bin/gcc.exe   -std=c99 --pedantic-errors -Wall -Werror -g   -o CMakeFiles/election_test.dir/area_votes.c.obj   -c C:/Users/shirb/WET1B/WET1B/area_votes.c",
+  "file": "C:/Users/shirb/WET1B/WET1B/area_votes.c"
+}
+]

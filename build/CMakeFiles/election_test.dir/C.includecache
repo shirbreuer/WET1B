@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/Users/shirb/WET1B/WET1B/area_votes.c
+area_votes.h
+C:/Users/shirb/WET1B/WET1B/area_votes.h
+map.h
+C:/Users/shirb/WET1B/WET1B/map.h
+
+C:/Users/shirb/WET1B/WET1B/area_votes.h
+map.h
+C:/Users/shirb/WET1B/WET1B/map.h
+
+C:/Users/shirb/WET1B/WET1B/election.c
+election.h
+C:/Users/shirb/WET1B/WET1B/election.h
+area_votes.h
+C:/Users/shirb/WET1B/WET1B/area_votes.h
+map.h
+C:/Users/shirb/WET1B/WET1B/map.h
+stdlib.h
+-
+stdio.h
+-
+
+C:/Users/shirb/WET1B/WET1B/election.h
+map.h
+C:/Users/shirb/WET1B/WET1B/map.h
+
+C:/Users/shirb/WET1B/WET1B/map.h
+stdbool.h
+-
+string.h
+-
+

@@ -13,5 +13,5 @@ set(MTM_FLAGS_RELEASE "${MTM_FLAGS_DEBUG} -DNDBUG")
 set(CMAKE_C_FLAGS ${MTM_FLAGS_DEBUG})
 # Tell CMake to build an executable named mtm_tot, specifying the comprising file(s)
 link_directories(.)
-add_executable(election_test election.c) #add files to execute
-target_link_libraries(<name_of_executable_file> libmap.a)
+add_executable(election_test election.c area_votes.c area_votes.h election.h map.h) #add files to execute
+target_link_libraries(election_test libmap.a)
