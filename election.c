@@ -1,4 +1,6 @@
 #include "election.h"
+#include "area_votes.h"
+#include "map.h"
 #include <stdlib.h>
 #include <stdio.h>
 #define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z') 
@@ -7,20 +9,6 @@
 
 
 
-//static functions
-
-
-
-
-
-
-
-
-typedef struct area_votes_t {
-int area_id;
-Map tribe_votes;
-struct area_votes_t* next;    
-} *AreaVotes;
 
 
 typedef struct  election_t {
@@ -31,16 +19,7 @@ typedef struct  election_t {
 };
 
 
-static AreaVotes nodeCreate(int area_id_to_add) {
-    AreaVotes area_votes = malloc(sizeof(*area_votes));
-    if(!area_votes){
-        return NULL;
-    }
-    area_votes->area_id=area_id_to_add;
-    area_votes->tribe_votes = mapCreate();
-    area_votes->next=NULL;
-    return area_votes;
-}
+
 
 static bool stringNameValidator(const char* stringName) {
     char* to_check;
@@ -83,46 +62,6 @@ static ElectionResult preVoteValidator(Election election, int area_id, int tribe
     }
     return ELECTION_SUCCESS;
 }
-
-static AreaVotes nodeGet(AreaVotes head, int area_id) {
-    while (head)
-    {
-        if (head->area_id == area_id) {
-            return head;
-        }
-        head = head->next;
-    }
-    return NULL;
-}
-
-static void nodeLink(AreaVotes previous, AreaVotes to_link) {
-    to_link->next = previous->next;
-    previous->next = to_link;
-}
-
-static void nodeDestroy(AreaVotes head, AreaVotes to_destroy) {
-    if (!head || !to_destroy) {
-        return;
-    }
-    while (head->next != to_destroy){
-        head = head->next;  // Is the value of the head is changing here ? 
-    }
-    nodeLink(head, to_destroy->next);
-    mapDestroy(to_destroy->tribe_votes);
-    free(to_destroy);
-}
-
-static void listDestroy(AreaVotes head) {
-    if(!head) {
-        return;
-    }
-    while(head->next) {
-        nodeDestroy(head,head->next);
-    }
-    mapDestroy(head->tribe_votes);
-    free(head);
-}
-
 Election electionCreate() {
     Election election = malloc(sizeof(*election));
     if (!election) {
@@ -247,8 +186,8 @@ ElectionResult electionRemoveAreas(Election election,  AreaConditionFunction sho
     for(char* key = mapGetFirst(election->area);key;key=mapGetNext(election->area)){
         if(should_delete_area((int)key)) {
             mapRemove(election->area,key);
-            AreaVotes area_votes_to_remove = nodeGet(election->vote_list_head,(int)key);
-            nodeDestroy(election->vote_list_head,area_votes_to_remove);
+            AreaVotes area_votes_to_remove = areaVotesGet(election->vote_list_head,(int)key);
+            areaVotesDestroy(election->vote_list_head,area_votes_to_remove);
         }
     }
     return ELECTION_SUCCESS;
@@ -259,17 +198,17 @@ ElectionResult electionAddVote (Election election, int area_id, int tribe_id, in
     if (validator != ELECTION_SUCCESS) {
         return validator;
     }
-    AreaVotes area_node = nodeGet(election->vote_list_head, area_id);
-    if (!area_node){
-        if (!(area_node = nodeCreate(area_id))) { // re-check
+    AreaVotes area_votes = areaVotesGet(election->vote_list_head, area_id);
+    if (!area_votes){
+        if (!(area_votes = areaVotesCreate(area_id))) { // re-check
             electionDestroy(election);
             return ELECTION_OUT_OF_MEMORY;
         }
-        nodeLink(election->vote_list_head , area_node);
+        areaVotesLink(election->vote_list_head , area_votes);
     }
     int current_vote_counter = GET_VOTE(election->vote_list_head->tribe_votes, tribe_id);
-    asssert(area_node->tribe_votes);
-    if ((mapPut(area_node->tribe_votes , (char*)tribe_id , current_vote_counter + num_of_votes)) == MAP_OUT_OF_MEMORY) {
+    assert(area_votes->tribe_votes);
+    if ((mapPut(area_votes->tribe_votes , (char*)tribe_id , current_vote_counter + num_of_votes)) == MAP_OUT_OF_MEMORY) {
         electionDestroy(election);
         return ELECTION_OUT_OF_MEMORY;
     }
@@ -307,7 +246,7 @@ Map electionComputeAreasToTribesMapping (Election election) {
                 tribe_winner_votes = temp_tribe_votes;
             }            
         }
-        asssert(election->results && election->vote_list_head->area_id && tribe_winner_id);
+        assert(election->results && election->vote_list_head->area_id && tribe_winner_id);
         mapPut(election->results, (char*) (election->vote_list_head->area_id), tribe_winner_id);
         election->vote_list_head = election->vote_list_head->next;
     }
