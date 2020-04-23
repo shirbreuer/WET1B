@@ -4,6 +4,7 @@
         "string": "c",
         "string_view": "c",
         "random": "c",
-        "functional": "c"
+        "functional": "c",
+        "election.h": "c"
     }
 }

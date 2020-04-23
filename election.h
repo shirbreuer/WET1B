@@ -4,7 +4,6 @@
 
 #ifndef MTM_ELECTION_H
 #define MTM_ELECTION_H
-
 #include "map.h" // change to mtm_map/map.h before submitting
 
 /* Type for defining the Election struct. */

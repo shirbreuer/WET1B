@@ -1,12 +1,13 @@
 #include "area_votes.h"
-#include "map.h"
+#include "map.h" // change to mtm_map/map.h before submitting
+#include <stdlib.h>
 
 
-typedef struct area_votes_t {
+struct area_votes_t {
 int area_id;
 Map tribe_votes;
 struct area_votes_t* next;    
-} *AreaVotes;
+};
 
 
 AreaVotes areaVotesCreate(int area_id_to_add) {
@@ -34,6 +35,19 @@ AreaVotes areaVotesGet(AreaVotes head, int area_id) {
     }
     return NULL;
 }
+
+AreaVotes areaVotesCopy(AreaVotes head) {
+    AreaVotes result = malloc(sizeof(*AreaVotes));
+    if (!result){
+        return NULL;
+    }
+    result->area_id = head->area_id;
+    result->next = head->next;
+    result->tribe_votes = mapCopy(head->tribe_votes);
+
+    return result;
+}
+
 
 void areaVotesLink(AreaVotes previous, AreaVotes to_link) {
     to_link->next = previous->next;

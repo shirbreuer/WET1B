@@ -6,26 +6,20 @@
 
 #IncludeRegexTransform: 
 
-C:/Users/shirb/WET1B/WET1B/area_votes.c
-area_votes.h
 C:/Users/shirb/WET1B/WET1B/area_votes.h
-map.h
-C:/Users/shirb/WET1B/WET1B/map.h
-
-C:/Users/shirb/WET1B/WET1B/area_votes.h
-map.h
-C:/Users/shirb/WET1B/WET1B/map.h
 
 C:/Users/shirb/WET1B/WET1B/election.c
 election.h
 C:/Users/shirb/WET1B/WET1B/election.h
-area_votes.h
-C:/Users/shirb/WET1B/WET1B/area_votes.h
 map.h
 C:/Users/shirb/WET1B/WET1B/map.h
+area_votes.h
+C:/Users/shirb/WET1B/WET1B/area_votes.h
 stdlib.h
 -
 stdio.h
+-
+assert.h
 -
 
 C:/Users/shirb/WET1B/WET1B/election.h

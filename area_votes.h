@@ -1,8 +1,6 @@
 #ifndef AREA_VOTES
 #define AREA_VOTES
 
-#include "map.h" // change to mtm_map/map.h before submitting
-
 
 /**
  * Area Votes
@@ -85,6 +83,10 @@ void areaVotesLink(AreaVotes previous, AreaVotes to_link);
  * AREAVOTES_SUCCESS - if remove was successful
 */
 AreaVotesResult areaVotesRemove(AreaVotes head, AreaVotes to_remove);
+
+
+
+AreaVotes areaVotesCopy(AreaVotes head);
 
 
 #endif
